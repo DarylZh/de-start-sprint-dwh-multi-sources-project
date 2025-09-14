@@ -1,0 +1,20 @@
+привет, 
+я просрочила сдачу проекта в августе. поэтому 
+из текущего условия
+STG-DAG грузит только последние 7 дней, а витрина считает предыдущий месяц (у меня сейчас это август 2025). Поэтому в CDM нет строк: в DDS/ STG просто нет августовских доставок.
+заменила окно в STG-таске на «прошлый месяц» в examples/stg/courier_api_dag.py функцию load_deliveries_last7d() и передедала все решение
+обновила dag stg dag dds 
+
+доставки за прошлый месяц добавились
+WITH m AS (
+  SELECT date_trunc('month', (now() at time zone 'utc')::date - interval '1 month')::date AS m_start,
+         date_trunc('month', (now() at time zone 'utc')::date)::date                     AS m_end
+)
+SELECT count(*) AS deliveries_dds
+FROM dds.fct_deliveries fd
+JOIN dds.dm_orders o ON o.id = fd.order_id
+JOIN dds.dm_timestamps t ON t.id = o.timestamp_id, m
+WHERE t.ts::date >= m.m_start AND t.ts::date < m.m_end;
+
+5311
+Итого заполнеятся все, кроме витрины. нужно обновить данные из mongo - но они не обновляются у меня сейчас уже - не знаю, какое здесь может быть решение моего вопроса
